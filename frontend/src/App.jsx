@@ -11,7 +11,6 @@ import Dashboard from "./pages/Dashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
-  // Zustand hooks
   const checkAuth = useAuthStore((state) => state.checkAuth);
   const user = useAuthStore((state) => state.user);
   const loading = useAuthStore((state) => state.loading);
@@ -34,20 +33,10 @@ function App() {
     <BrowserRouter>
       <Routes>
         {/* Default route */}
-
-
         <Route
-  path="/"
-  element={
-    loading ? (
-      <div>Loading...</div>
-    ) : user ? (
-      <Navigate to="/dashboard" />
-    ) : (
-      <Navigate to="/login" />
-    )
-  }
-/>
+          path="/"
+          element={user ? <Navigate to="/dashboard" /> : <Navigate to="/login" />}
+        />
 
         {/* Public routes */}
         <Route path="/login" element={<Login />} />

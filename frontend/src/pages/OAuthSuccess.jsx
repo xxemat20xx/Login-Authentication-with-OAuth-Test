@@ -5,19 +5,21 @@ import { useAuthStore } from "../store/authStore";
 export default function OAuthSuccess() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
+  const loading = useAuthStore((state) => state.loading);
 
   useEffect(() => {
-    // Delay redirect slightly to show the "Logging in..." page
+    if (loading) return; // wait for checkAuth to finish
+
     const timeout = setTimeout(() => {
       if (user) {
         navigate("/dashboard");
       } else {
         navigate("/login");
       }
-    }, 1500); // 1.5 seconds, adjust as needed
+    }, 1500); // small delay for user experience
 
-    return () => clearTimeout(timeout); // cleanup if component unmounts
-  }, [user, navigate]);
+    return () => clearTimeout(timeout);
+  }, [user, loading, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">

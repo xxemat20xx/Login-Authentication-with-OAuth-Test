@@ -19,17 +19,18 @@ export const useAuthStore = create((set) => ({
     await api.post("/auth/logout");
     set({ user: null });
   },
-
   checkAuth: async () => {
-    console.log("Inside checkAuth"); // <- should appear
-    set({ loading: true });
+    set({ loading: true, error: null });
     try {
-      const res = await api.get("/auth/check");
-      console.log("checkAuth response:", res.data);
-      set({ user: res.data });
+      const res = await api.get("/auth/check"); // withCredentials sends the cookie
+      set({
+        user: res.data.user, // backend returns { user: { id, name, email } }
+      });
     } catch (error) {
-      console.error("checkAuth error:", error);
-      set({ user: null });
+      console.error("checkAuth error:", error.response?.data || error.message);
+      set({
+        user: null,
+      });
     } finally {
       set({ loading: false });
     }

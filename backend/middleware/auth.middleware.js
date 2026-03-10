@@ -1,19 +1,23 @@
 import jwt from "jsonwebtoken";
 
-export const protect = (req, res, next) => {
-  const token = req.cookies.token;
-
-  if (!token) {
-    return res.status(401).json({ message: "Not authorized" });
-  }
+export const verifyToken = (req, res, next) => {
+  const token = req.cookies.accessToken;
 
   try {
+    if (!token) {
+      return res
+        .status(400)
+        .json({ message: "Unauthorize, token missing. ", success: false });
+    }
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    req.user = decoded;
-
+    req.userId = decoded.userId;
     next();
   } catch (error) {
-    res.status(401).json({ message: "Token invalid" });
+    next(error);
+    console.log("Error in verifying token", error);
+    return res.status(500).json({
+      success: false,
+      message: "Unauthorized, invalid token",
+    });
   }
 };
