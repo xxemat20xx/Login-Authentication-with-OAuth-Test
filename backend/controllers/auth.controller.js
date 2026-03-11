@@ -1,107 +1,56 @@
-import User from "../models/User.js";
-import bcrypt from "bcryptjs";
-import { generateAccessToken } from "../utils/generateToken.js";
+import { User } from "../models/user.model.js";
+
+// cookie
 import { cookieOptions } from "../utils/cookie.js";
 
-// ---------------- REGISTER ----------------
+// token
+import { generateAccessToken } from "../utils/token.js";
+
 export const register = async (req, res) => {
+  const { email, password, name } = req.body;
   try {
-    const { name, email, password } = req.body;
+    if (password.length < 6)
+      return res
+        .status(401)
+        .json({ message: "Password must be at least 6 character" });
 
-    // Check if user exists
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res.status(400).json({ message: "User already exists" });
-    }
+    const existingUser = await User.findOne({ email });
+    if (existingUser)
+      return res.status(400).json({ message: "User already exist" });
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create user
-    const user = await User.create({
+    // save to database
+    const newUser = new User({
       name,
       email,
-      password: hashedPassword,
+      password,
     });
+    await newUser.save();
 
-    res.status(201).json({
-      message: "User registered successfully",
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-      },
+    res.status(200).json({
+      message: "Successfully registered.",
     });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+    console.error(error);
   }
 };
 
-// ---------------- LOGIN ----------------
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    const user = await User.findOne({ email }).select("+password");
 
-    // Find user
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: "User not found" });
-    }
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Check password
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) {
-      return res.status(400).json({ message: "Invalid credentials" });
-    }
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) return res.status(401).json({ message: "Invalid password" });
 
-    // Generate token
     const accessToken = generateAccessToken(user);
 
-    // Set cookie
     res.cookie("accessToken", accessToken, {
       ...cookieOptions,
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
+      maxAge: 24 * 60 * 60 * 1000, //1 day
     });
-
-    res.json({
-      message: "Login successful",
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-      },
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-// ---------------- LOGOUT ----------------
-export const logout = (req, res) => {
-  // Clear cookie
-  res.clearCookie("accessToken", {
-    ...cookieOptions,
-    httpOnly: true,
-  });
-
-  res.json({ message: "Logged out successfully" });
-};
-
-// ---------------- CHECK AUTH ----------------
-export const checkAuth = async (req, res) => {
-  try {
-    // req.userId should be set by your verifyToken middleware
-    if (!req.userId) {
-      return res.status(401).json({ message: "Unauthorized, no userId found" });
-    }
-
-    const user = await User.findById(req.userId);
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
     res.json({
       user: {
         id: user._id,
@@ -110,6 +59,30 @@ export const checkAuth = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ error: error.message });
+  }
+};
+export const logout = async (req, res) => {
+  try {
+    res.clearCookie("accessToken", cookieOptions);
+    res.json({ message: "Logged out successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+export const checkAuth = async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json({
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };

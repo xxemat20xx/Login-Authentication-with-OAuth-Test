@@ -7,29 +7,43 @@ import {
   logout,
   checkAuth,
 } from "../controllers/auth.controller.js";
-
 import { verifyToken } from "../middleware/auth.middleware.js";
 
-const router = express.Router();
+// cookie
+import { cookieOptions } from "../utils/cookie.js";
 
-router.post("/register", register);
-router.post("/login", login);
-router.post("/logout", logout);
-router.get("/check", verifyToken, checkAuth);
+// token
+import { generateAccessToken } from "../utils/token.js";
 
-router.get(
+const userRoutes = express.Router();
+
+userRoutes.post("/register", register);
+userRoutes.post("/login", login);
+
+// authenticated user
+userRoutes.post("/logout", verifyToken, logout);
+userRoutes.get("/checkAuth", verifyToken, checkAuth);
+
+// google
+userRoutes.get(
   "/google",
   passport.authenticate("google", { scope: ["profile", "email"] }),
 );
 
-router.get(
+userRoutes.get(
   "/google/callback",
   passport.authenticate("google", { session: false }),
   (req, res) => {
-    // generateToken(req.user._id, res);
+    // generate JWT like manual login
+    const accessToken = generateAccessToken(req.user);
 
-    res.redirect("http://localhost:5173/oauth-success");
+    // set cookie
+    res.cookie("accessToken", accessToken, {
+      ...cookieOptions,
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
+    });
+    res.redirect("http://localhost:5173/dashboard");
   },
 );
 
-export default router;
+export default userRoutes;

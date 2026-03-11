@@ -1,19 +1,25 @@
 import express from "express";
-import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import passport from "passport";
-
-import authRoutes from "./routes/auth.routes.js";
-import "./config/passport.js";
-
 dotenv.config();
 
+// db import
+import { connectDB } from "./lib/db.js";
+
+// routes import
+import userRoutes from "./routes/auth.routes.js";
+
+// passport config
+import passport from "passport";
+import "./config/passport.js";
+
 const app = express();
+const PORT = process.env.PORT || 5000;
 
 app.use(express.json());
 app.use(cookieParser());
+app.use(passport.initialize());
 
 app.use(
   cors({
@@ -22,15 +28,9 @@ app.use(
   }),
 );
 
-app.use(passport.initialize());
+app.use("/api/auth", userRoutes);
 
-app.use("/api/auth", authRoutes);
-
-mongoose
-  .connect(process.env.MONGODB_URI)
-  .then(() => console.log("MongoDB Connected"))
-  .catch((err) => console.log(err));
-
-app.listen(5000, () => {
+app.listen(PORT, () => {
   console.log("Server running on port 5000");
+  connectDB();
 });
